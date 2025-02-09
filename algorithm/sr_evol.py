@@ -22,15 +22,6 @@ class SrEvol:
         self.api_key = paras.llm_api_key
         self.llm_model = paras.llm_model
 
-        # ------------------ RZ: use local LLM ------------------
-        # self.use_local_llm = kwargs.get('use_local_llm', False)
-        # assert isinstance(self.use_local_llm, bool)
-        # if self.use_local_llm:
-        #     assert 'url' in kwargs, 'The keyword "url" should be provided when use_local_llm is True.'
-        #     assert isinstance(kwargs.get('url'), str)
-        #     self.url = kwargs.get('url')
-        # -------------------------------------------------------
-
         # Experimental settings
         self.pop_size = paras.pop_size
         self.offspring_size = paras.offspring_size

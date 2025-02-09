@@ -5,7 +5,7 @@ import numpy as np
 
 def population_management(pop, size):
     pop = [individual for individual in pop if individual['objective'] is not None and
-           not np.isnan(individual['objective']) and np.isreal(individual['objective'])]  # 过滤目标值为空的个体
+           not np.isnan(individual['objective']) and np.isreal(individual['objective'])]
 
     if size > len(pop):
         size = len(pop)

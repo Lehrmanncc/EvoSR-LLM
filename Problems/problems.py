@@ -66,7 +66,6 @@ class ProblemSR:
             start_time = time.time()
 
             while changed:
-                # 检查是否超时
                 if time.time() - start_time > max_runtime:
                     expr = None
                     break
@@ -75,7 +74,6 @@ class ProblemSR:
                 for var, sub_expr in context.items():
                     if re.search(r'\b' + re.escape(var) + r'\b', expr):
                         if len(sub_expr) > 1:
-                            # 替换为最后一个赋值表达式
                             expr = expr.replace(var, f"({sub_expr[-1]})")
                             sub_expr.pop(-1)
                             changed = True
