@@ -1,11 +1,8 @@
 import numpy as np
 import json
-import random
 import time
 import os
 from scipy.stats import rankdata
-from datetime import datetime
-import logging
 
 from algorithm.evaluation import Evaluation
 from population.management import population_management
@@ -35,11 +32,10 @@ class SrEvol:
         # -------------------------------------------------------
 
         # Experimental settings
-        self.pop_size = paras.pop_size  # popopulation size, i.e., the number of algorithms in population
+        self.pop_size = paras.pop_size
         self.offspring_size = paras.offspring_size
-        self.max_fe = paras.max_fe  # 种群迭代数
+        self.max_fe = paras.max_fe
 
-        # self.operators = paras.operators
         self.operators_gen_num = paras.operators_gen_num
         if paras.m > self.pop_size or paras.m == 1:
             print("m should not be larger than pop size or smaller than 2, adjust it to m=2")
@@ -65,7 +61,7 @@ class SrEvol:
         self.lamda = paras.lamda
         self.alpha = paras.alpha
 
-        print("- SR-LLM parameters loaded -")
+        print("- EvoSR-LLM parameters loaded -")
 
         # Set a random seed
         # random.seed(2024)
@@ -75,7 +71,6 @@ class SrEvol:
         for off in offspring:
             for ind in population:
                 if ind['objective'] == off['objective']:
-                    if (self.debug_mode):
                         print("duplicated result, retrying ... ")
             population.append(off)
 
@@ -88,26 +83,17 @@ class SrEvol:
         for operator_fitness in operator_pop_fitness:
             length = len(operator_fitness)
             operator_ranks = ranks[current_index:current_index + length]
-            average_ranks.append(operator_ranks.mean())  # 直接使用 NumPy 的 mean 计算平均值
+            average_ranks.append(operator_ranks.mean())
             current_index += length
         return average_ranks
 
-    # run eoh
     def run(self):
-        # logging.basicConfig(
-        #     filename="./logfile.log",  # 日志文件名
-        #     level=logging.INFO,  # 日志级别
-        #     format="%(asctime)s - %(message)s",  # 日志格式
-        # )
         print("- Evolution Start -")
-        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-
         time_start = time.time()
         gen = 0
         op_index = 0
         op_label_lst = ["MKP", "MIP", "MCP"]
 
-        # interface for ec operators
         eval = Evaluation(self.offspring_size, self.m, self.api_endpoint, self.api_key, self.llm_model,
                           self.use_local_llm, self.llm_local_url,
                           self.debug_mode, self.problem, n_process=self.n_process,
@@ -140,9 +126,8 @@ class SrEvol:
                     population.append(individual)
                 print("initial population has been loaded!")
                 n_start = self.load_pop_id
-            else:  # create new population
+            else:
                 print("creating initial population:")
-                # 生成初始种群，大小为2*self.pop_size
                 population = eval.init_population()
                 for i in range(len(population)):
                     filename = (self.output_path
@@ -172,13 +157,11 @@ class SrEvol:
 
         while self.problem.fe < self.max_fe:
             gen += 1
-            # 遍历每个操作，每个操作都会产生对应的4个子代，并进行更新种群，所以总共会产生5*4个子代更新种群
             for i in range(len(operator_pop)):
                 op = operator_pop[i]
                 print(f" OP: [{i + 1} / {len(operator_pop)}] ")
                 parents, offsprings = eval.get_equation(population, op)
-                print("成功得到子代！")
-                # 子代添加进当前种群
+
                 self.add2pop(population, offsprings)
                 for j, off in enumerate(offsprings):
                     filename = (self.output_path
@@ -211,11 +194,8 @@ class SrEvol:
                         with open(filename, 'w') as f:
                             json.dump(offsprings[j], f, indent=4)
 
-                    # logging.info(f"FEs: {self.problem.fe}: {operator_pop_fitness}")
-
                 print(f"FEs used:{self.problem.fe}")
-                # populatin management
-                # 合并后的种群进行选择pop_size大小的作为最新种群。
+
                 size_act = min(len(population), self.pop_size)
                 population = population_management(population, size_act)
 
@@ -225,8 +205,6 @@ class SrEvol:
 
             if gen == self.operators_gen_num:
                 gen = 0
-                # print(operator_pop_fitness)
-                # logging.info(f"Change OP! FEs: {self.problem.fe}: {operator_pop_fitness}")
 
                 average_rank = self.cal_operator_fitness(operator_pop_fitness)
                 filename = (self.output_path
@@ -250,7 +228,6 @@ class SrEvol:
                 operator_pop_fitness = [[] for _ in range(len(operator_pop))]
                 op_index = (op_index + 1) % len(op_label_lst)
 
-            # Save population to a file
             filename = (self.output_path
                         + f"/results/{self.problem.benchmark_name}/{self.llm_model}/{self.problem.problem_name}/pops/population_fe="
                         + str(self.problem.fe) + ".json")
@@ -258,13 +235,10 @@ class SrEvol:
             with open(filename, 'w') as f:
                 json.dump(population, f, indent=5)
 
-            # Save the best one to a file
-            # test_r2, test_mse = self.problem.test_evaluate(population[0]['code'])
             vaild_nmse = self.problem.valid_evaluate(population[0]['param_code'])
             population[0].update({'test_id_nmse': vaild_nmse})
             test_nmse = self.problem.test_evaluate(population[0]['param_code'])
             population[0].update({'test_ood_nmse': test_nmse})
-            # if self.problem.fe >= self.max_fe:
 
             filename = (self.output_path
                         + f"/results/{self.problem.benchmark_name}/{self.llm_model}/{self.problem.problem_name}/pops_best/population_fe="

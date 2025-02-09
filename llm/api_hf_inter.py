@@ -1,7 +1,6 @@
 import http.client
 import json
 import requests
-# import torch
 class InterfaceHF():
 
     def __init__(self,key,model_LLM,debug_mode):

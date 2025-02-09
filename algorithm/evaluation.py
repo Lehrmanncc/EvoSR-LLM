@@ -23,7 +23,7 @@ class Evaluation:
         if not self.debug:
             warnings.filterwarnings("ignore")
 
-        self.n_process = n_process  # 进程数
+        self.n_process = n_process
 
         self.timeout = timeout
         self.use_numba = use_numba
@@ -38,20 +38,14 @@ class Evaluation:
 
     def replace_params(self, equ_code, equ_params):
         for i, param in enumerate(equ_params):
-            # equ_desc = re.sub(rf'params\[{i}]', str(param), equ_desc)
             equ_code = re.sub(rf'params\[{i}]', str(param), equ_code)
         equ_code = re.sub(r',\s*params', '', equ_code)
         return equ_code
 
     def init_population(self):
-        """
-        生成初始种群
-        """
-
         n_create = 7
         population = []
 
-        # 重复生成两次pop合并，作为初始种群
         for i in range(n_create):
             _, pop = self.get_equation([], None, True)
             for p in pop:
@@ -101,12 +95,9 @@ class Evaluation:
         results = []
         try:
             results = []
-            # 获取self.pop_size个子代
             for _ in range(self.offspring_size):
                 p, off = self.offspring_eval(pop, operator, init_flag)
                 results.append((p, off))
-            # results = Parallel(n_jobs=self.n_p, timeout=self.timeout + 15)(
-            #     delayed(self.get_offspring)(pop, operator) for _ in range(self.pop_size))
         except Exception as e:
             if e:
                 print(f"Error: {e}")
@@ -120,23 +111,13 @@ class Evaluation:
         for p, off in results:
             out_p.append(p)
             out_off.append(off)
-            if self.debug:
-                print(f">>> check offsprings: \n {off}")
         return out_p, out_off
 
     def offspring_eval(self, pop, operator, init_flag):
-        print("进入子代评估：")
         try:
-            # 返回被选择的父代与生成的子代，个体为dict类型
             p, offspring = self.get_offspring(pop, operator, init_flag)
-
-            # 是否使用Numba对函数进行加速
             if self.use_numba:
-
-                # Regular expression pattern to match function definitions
                 pattern = r"def\s+(\w+)\s*\(.*\):"
-
-                # Search for function definitions in the code
                 match = re.search(pattern, offspring['code'])
 
                 function_name = match.group(1)
@@ -146,25 +127,18 @@ class Evaluation:
                 code = offspring['code']
 
             n_retry = 1
-            # 检查生成的子代个体的code是否在population中已经存在，如果相同则再尝试重新生成
-            print("检查子代个体是否已存在")
             while self.check_duplicate(pop, offspring['code']):
 
                 n_retry += 1
-                if self.debug:
-                    print("duplicated code, wait 1 second and retrying ... ")
 
                 p, offspring = self.get_offspring(pop, operator, init_flag)
 
                 if self.use_numba:
-                    # Regular expression pattern to match function definitions
                     pattern = r"def\s+(\w+)\s*\(.*\):"
 
                     # Search for function definitions in the code
                     match = re.search(pattern, offspring['code'])
-
                     function_name = match.group(1)
-
                     code = add_numba_decorator(program=offspring['code'], function_name=function_name)
                 else:
                     code = offspring['code']
@@ -172,7 +146,6 @@ class Evaluation:
                 if n_retry > 1:
                     break
 
-            # concurrent.futures.ThreadPoolExecutor来并发执行一个评估任务
             with concurrent.futures.ThreadPoolExecutor() as executor:
                 future = executor.submit(self.problem.train_evaluate, code)
                 mse, opt_params = future.result(timeout=self.timeout)
@@ -197,8 +170,7 @@ class Evaluation:
                 else:
                     offspring['objective'] = None
                 future.cancel()
-                # fitness = self.interface_eval.evaluate(code)
-            print("子代评估完成！")
+
         except Exception as e:
             print(e)
             offspring = {
@@ -219,7 +191,6 @@ class Evaluation:
         return p, offspring
 
     def get_offspring(self, pop, operator, init_flag):
-        print("获取子代个体")
         offspring = {
             'knowledge': None,
             'insight': None,
@@ -238,7 +209,6 @@ class Evaluation:
             [offspring['knowledge'], offspring['insight'], offspring['code']] = self.operator.init_equ()
         else:
             if operator:
-                print("获取父代个体")
                 parents = best_select(pop, self.m)
                 [offspring['knowledge'], offspring['insight'], offspring['code']] = self.operator.op_offspring(parents,
                                                                                                                operator)
@@ -246,29 +216,3 @@ class Evaluation:
                 print(f"Evolution operator [{operator}] has not been implemented ! \n")
 
         return parents, offspring
-
-
-if __name__ == "__main__":
-    import os
-    from Problems.problems import ProblemSR
-    from utils.util import Paras
-
-    paras = Paras()
-
-    # Set parameters #
-    paras.set_paras(method="eoh",
-                    ec_operators=['e1', 'e2', 'm1', 'm2', 'm3'],  # operators in EoH
-                    problem="nguyen",  # ['tsp_construct','bp_online','tsp_gls','fssp_gls']
-                    llm_api_endpoint="gpt.xdmaxwell.top",  # set endpoint
-                    llm_api_key=os.environ["XIDIAN_API_KEY"],  # set your key
-                    llm_model="gpt-3.5-turbo-1106",  # set llm
-                    ec_pop_size=4,
-                    ec_n_pop=2,
-                    exp_n_proc=4,
-                    exp_debug_mode=False)
-
-    problem = ProblemSR(paras)
-    eval = Evaluation(4, 2, "gpt.xdmaxwell.top",
-                      os.environ["XIDIAN_API_KEY"], None, None, None,
-                      False, problem, 11, 2, 30, False)
-    eval.init_population()

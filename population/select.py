@@ -2,7 +2,6 @@ import random
 
 
 def best_select(pop, m):
-    # 由于这里的种群已经根据目标值从小到大排序了，所以rank就是其顺序
     ranks = [i for i in range(len(pop))]
     probs = [1 / (rank + 1 + len(pop)) for rank in ranks]
     parents = random.choices(pop, weights=probs, k=m)

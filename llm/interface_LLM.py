@@ -51,5 +51,4 @@ class InterfaceLLM:
 
     def get_response(self, prompt_content):
         response = self.interface_llm.get_response(prompt_content)
-        print("成功得到response")
         return response
