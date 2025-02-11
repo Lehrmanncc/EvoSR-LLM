@@ -18,11 +18,9 @@ paras.set_paras(benchmark="llm_sr",
                 llm_model="gpt-3.5-turbo",
                 pop_size=10,
                 offspring_size=2,
-                max_fe=10000,
+                max_fe=3000,
                 n_process=4,
                 operators_gen_num=120,
-                exp_debug_mode=False,
-                lamda=0.01,
                 alpha=5)
 
 problem_name = "bactgrow"
