@@ -11,20 +11,25 @@ from utils.util import Paras
 from Problems.problems import ProblemSR
 
 paras = Paras()
+idx = 1
 
-paras.set_paras(benchmark="llm_sr",
-                llm_api_endpoint=None,
-                llm_api_key=None,
-                llm_model="gpt-3.5-turbo",
+paras.set_paras(benchmark="llm_srbench",
+                llm_api_endpoint="aihubmix.com",
+                llm_api_key="sk-xHQx5tvpC6Q30Qrk2c5e57665613441286E057C181CbB062",
+                llm_model="gpt-4o-mini",
+                # llm_model="gpt-3.5-turbo",
                 pop_size=10,
                 offspring_size=2,
                 max_fe=3000,
                 n_process=4,
                 operators_gen_num=120,
-                alpha=5)
+                alpha=5,
+                exp_output_path=f"./results_25_8_10/ins{idx}")
 
-problem_name = "bactgrow"
-sr_problem = ProblemSR(paras.benchmark, problem_name)
+# problem_name = "bactgrow"
+problem_name = "matsci"
+
+sr_problem = ProblemSR(paras.benchmark, problem_name, idx)
 evolution = SrEvol(paras, sr_problem)
 
 evolution.run()

@@ -1,0 +1,4 @@
+- dataset.name=stressstrain
+- dataset.type=llmsr_data
+- llm.model_name=gpt-4o-mini
+- llm.choice=4

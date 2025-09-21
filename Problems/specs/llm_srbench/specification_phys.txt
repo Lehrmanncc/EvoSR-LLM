@@ -1,0 +1,19 @@
+### Problem Task
+Discover a mathematical function skeleton for a physics nonl-linear harmonic oscillator system. The goal is to model acceleration from state variables such as position and time, consistent with dynamical systems.
+
+### Equation Input Specification
+`x`: Position at time t
+`t`: Time
+
+
+### Equation Output Specification
+`dv_dt`: Acceleration in Nonl-linear Harmonic Oscillator
+
+### Equation Code Example
+```python
+import numpy as np
+
+def equation(x, t, params):
+    dv_dt = params[0] * x + params[1] * t
+    return dv_dt
+```

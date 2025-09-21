@@ -116,6 +116,7 @@ class Evaluation:
     def offspring_eval(self, pop, operator, init_flag):
         try:
             p, offspring = self.get_offspring(pop, operator, init_flag)
+            # print(offspring)
             if self.use_numba:
                 pattern = r"def\s+(\w+)\s*\(.*\):"
                 match = re.search(pattern, offspring['code'])

@@ -1,0 +1,25 @@
+# 忽略所有 JSON 文件（实验结果、日志等）
+*.json
+*.yaml
+
+# Python 缓存文件
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Jupyter Notebook 检查点
+.ipynb_checkpoints/
+
+# C/C++ 编译文件（如果有）
+*.o
+*.out
+*.exe
+
+# 常见的日志文件
+*.log
+
+# 临时文件
+*.tmp
+*.swp
+.DS_Store

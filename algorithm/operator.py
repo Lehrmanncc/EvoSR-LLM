@@ -140,47 +140,128 @@ class Operator(OperatorPrompt):
 
     def llm_get_equ(self, prompt_content):
         response = self.interface_llm.get_response(prompt_content)
-        equ_desc = re.findall(r"\{(.*?)\}", response, re.DOTALL)
-        if len(equ_desc) == 0:
-            if 'python' in response:
-                equ_desc = re.findall(r'^.*?(?=python)', response, re.DOTALL)
-            elif 'import' in response:
-                equ_desc = re.findall(r'^.*?(?=import)', response, re.DOTALL)
+        # print(response)   
+
+        brace_content = re.findall(r"\{(.*?)\}", response, re.DOTALL)
+        equ_knowledge, equ_insight, equ_code = "", "", ""
+        if len(brace_content) >= 2:
+            equ_knowledge = brace_content[0].strip()
+            equ_insight = brace_content[1].strip()
+        elif len(brace_content) == 1:
+            # 3. 只有一个块，尝试用关键词拆分
+            block = brace_content[0]
+            split_pt = re.search(r"(?:innovative|novel)\s+insight", block, re.IGNORECASE)
+
+            if split_pt:
+                idx = split_pt.start()
+                equ_knowledge = block[:idx].strip()
+                equ_insight = block[idx:].strip()
             else:
-                equ_desc = re.findall(r'^.*?(?=def)', response, re.DOTALL)
-        equ_code = re.findall(r"import.*return", response, re.DOTALL)
-        if len(equ_code) == 0:
-            equ_code = re.findall(r"def.*return", response, re.DOTALL)
+                equ_knowledge = block.strip()
+        if not equ_knowledge or not equ_insight:
+            # 定义可能的关键词（可扩展）
+            knowledge_keys = ["Prior Knowledge", "Background Knowledge", "Scientific Knowledge", "Knowledge"]
+            insight_keys = ["Innovative Insight", "Proposed Scientific Insight", "Novel Insight", "Insight"]
 
-        n_retry = 1
-        while (len(equ_desc) == 0 or len(equ_code) == 0):
-            print("Error: equ_desc or equ_code not identified, wait 1 seconds and retrying ... ")
+            def make_pattern(keys):
+                # e.g.  (Prior Knowledge|Background Knowledge|...)
+                return r"(?:{})\s*:\s*(.*?)(?={}|$)".format(
+                    "|".join(map(re.escape, keys)),
+                    "|".join(map(re.escape, knowledge_keys + insight_keys + ["import", "def"]))
+                )
+            text_all = " ".join(brace_content) if brace_content else response
+            if brace_content:
+                # text = brace_content[0]
 
-            response = self.interface_llm.get_response(prompt_content)
+                # 2. 提取 Knowledge
+                if not equ_knowledge:
+                    m = re.search(make_pattern(knowledge_keys), text_all, re.DOTALL | re.IGNORECASE)
+                    if m:
+                        equ_knowledge = m.group(1).strip()
 
-            equ_desc = re.findall(r"\{(.*?)\}", response, re.DOTALL)
-            if len(equ_desc) == 0:
-                if 'python' in response:
-                    equ_desc = re.findall(r'^.*?(?=python)', response, re.DOTALL)
-                elif 'import' in response:
-                    equ_desc = re.findall(r'^.*?(?=import)', response, re.DOTALL)
-                else:
-                    equ_desc = re.findall(r'^.*?(?=def)', response, re.DOTALL)
+                if not equ_insight:
+                    m = re.search(make_pattern(insight_keys), text_all, re.DOTALL | re.IGNORECASE)
+                    if m:
+                        equ_insight = m.group(1).strip()
 
-            equ_code = re.findall(r"import.*return", response, re.DOTALL)
-            if len(equ_code) == 0:
-                equ_code = re.findall(r"def.*return", response, re.DOTALL)
+        m = re.search(r"```python\s+(.*?)```", response, re.DOTALL | re.IGNORECASE)
+        if m:
+            equ_code = m.group(1).strip()
+        else:
+            # 退化: 找 def ... return
+            m = re.search(r"(?:import\s+[^\n]+\n)*(?:def\s+\w+\s*\([^)]*\):[\s\S]+?return[^\n]*)", response, re.DOTALL)
+            if m:
+                equ_code = m.group(0).strip()
 
-            if n_retry > 3:
-                break
-            n_retry += 1
+        if not equ_code:
+            m = re.search(r"def\s+\w+\s*\([^)]*\):[\s\S]+", response)
+            if m:
+                equ_code = m.group(0).strip()
+        equ_code = equ_code.rstrip('`').strip()
+            #     # 4. 提取代码（大括号内）
+            #     m = re.search(r"(import .*return[^\n]*|def .*return[^\n]*)", text, re.DOTALL)
+            #     if m:
+            #         equ_code = m.group(1).strip()
 
-        equ_knowledge = equ_desc[0]
-        equ_insight = equ_desc[1]
-        equ_code = equ_code[0]
-        equ_code = equ_code + " " + ", ".join(s for s in self.prompt_func_outputs)
+            #     # 5. 如果代码不在大括号里，再匹配一次
+            # if not equ_code:
+            #     m = re.search(r"(import .*return[^\n]*|def .*return[^\n]*)", response, re.DOTALL)
+            #     if m:
+            #         equ_code = m.group(1).strip()
 
+            # 如果缺少某部分，用空字符串占位
+        equ_knowledge = equ_knowledge or ""
+        equ_insight = equ_insight or ""
+        equ_code = (equ_code or "")
+
+        # print(equ_knowledge)
+        # print(equ_insight)
+        # print(equ_code)
         return [equ_knowledge, equ_insight, equ_code]
+
+
+
+        # equ_desc = re.findall(r"\{(.*?)\}", response, re.DOTALL)
+        # if len(equ_desc) == 0:
+        #     if 'python' in response:
+        #         equ_desc = re.findall(r'^.*?(?=python)', response, re.DOTALL)
+        #     elif 'import' in response:
+        #         equ_desc = re.findall(r'^.*?(?=import)', response, re.DOTALL)
+        #     else:
+        #         equ_desc = re.findall(r'^.*?(?=def)', response, re.DOTALL)
+        # equ_code = re.findall(r"import.*return", response, re.DOTALL)
+        # if len(equ_code) == 0:
+        #     equ_code = re.findall(r"def.*return", response, re.DOTALL)
+        #
+        # n_retry = 1
+        # while (len(equ_desc) == 0 or len(equ_code) == 0):
+        #     print("Error: equ_desc or equ_code not identified, wait 1 seconds and retrying ... ")
+        #
+        #     response = self.interface_llm.get_response(prompt_content)
+        #
+        #     equ_desc = re.findall(r"\{(.*?)\}", response, re.DOTALL)
+        #     if len(equ_desc) == 0:
+        #         if 'python' in response:
+        #             equ_desc = re.findall(r'^.*?(?=python)', response, re.DOTALL)
+        #         elif 'import' in response:
+        #             equ_desc = re.findall(r'^.*?(?=import)', response, re.DOTALL)
+        #         else:
+        #             equ_desc = re.findall(r'^.*?(?=def)', response, re.DOTALL)
+        #
+        #     equ_code = re.findall(r"import.*return", response, re.DOTALL)
+        #     if len(equ_code) == 0:
+        #         equ_code = re.findall(r"def.*return", response, re.DOTALL)
+        #
+        #     if n_retry > 3:
+        #         break
+        #     n_retry += 1
+        #
+        # equ_knowledge = equ_desc[0]
+        # equ_insight = equ_desc[1]
+        # equ_code = equ_code[0]
+        # equ_code = equ_code + " " + ", ".join(s for s in self.prompt_func_outputs)
+
+        # return [equ_knowledge, equ_insight, equ_code]
 
     def llm_get_op_prompt(self, op_label):
         metaprompt_content = self.meta_prompt.check_prompt(op_label)

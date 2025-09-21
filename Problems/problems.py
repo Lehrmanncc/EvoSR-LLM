@@ -8,12 +8,14 @@ import numpy as np
 import pandas as pd
 from utils.util import code_str2code, get_params_num
 from scipy.optimize import minimize
+from llm_srbench.llm_srbench_loader import LLMSRBenchLoader
 
 
 class ProblemSR:
-    def __init__(self, benchmark_name, problem_name, problem_spec=True):
+    def __init__(self, benchmark_name, problem_name, ins_idx, problem_spec=True):
         self.benchmark_name = benchmark_name
         self.problem_name = problem_name
+        self.ins_idx = ins_idx
         self.var_name = None
         self.output_name = None
         self.problem_spec = problem_spec
@@ -29,20 +31,28 @@ class ProblemSR:
         self.fe = 0
 
     def get_problem(self):
-        file_path = os.path.abspath(__file__)
-        problem_path = os.path.join(os.path.dirname(file_path), self.benchmark_name, self.problem_name)
-        data = pd.read_csv(problem_path + '/train.csv')
-        self.var_name, self.output_name = data.columns.tolist()[:-1], data.columns.tolist()[-1]
-        train_data = np.array(data)
+        if self.benchmark_name == "llm_srbench":
+            loader = LLMSRBenchLoader(self.problem_name, self.ins_idx)
+            dataset = loader.get_problem()
+            self.var_name = loader.var_name
+            self.output_name = loader.output_name
+            return dataset
 
-        if self.benchmark_name == "Feynman":
-            test_data = np.array(pd.read_csv(problem_path + '/test.csv'))
-            dataset = {'train_data': train_data, 'test_data': test_data}
         else:
-            valid_data = np.array(pd.read_csv(problem_path + '/test_id.csv'))
-            test_data = np.array(pd.read_csv(problem_path + '/test_ood.csv'))
-            dataset = {'train_data': train_data, 'valid_data': valid_data, 'test_data': test_data}
-        return dataset
+            file_path = os.path.abspath(__file__)
+            problem_path = os.path.join(os.path.dirname(file_path), self.benchmark_name, self.problem_name)
+            data = pd.read_csv(problem_path + '/train.csv')
+            self.var_name, self.output_name = data.columns.tolist()[:-1], data.columns.tolist()[-1]
+            train_data = np.array(data)
+
+            if self.benchmark_name == "Feynman":
+                test_data = np.array(pd.read_csv(problem_path + '/test.csv'))
+                dataset = {'train_data': train_data, 'test_data': test_data}
+            else:
+                valid_data = np.array(pd.read_csv(problem_path + '/test_id.csv'))
+                test_data = np.array(pd.read_csv(problem_path + '/test_ood.csv'))
+                dataset = {'train_data': train_data, 'valid_data': valid_data, 'test_data': test_data}
+            return dataset
 
     def extract_expression(self, code_str):
         tree = ast.parse(code_str)
@@ -130,6 +140,7 @@ class ProblemSR:
     def train_evaluate(self, sr_code_str):
         self.fe += 1
         train_data = self.dataset["train_data"]
+        # print(sr_code_str)
         try:
             sr_module = code_str2code(sr_code_str)
             loss_func = lambda params: self.train_eval(train_data, sr_module, params)
@@ -178,5 +189,6 @@ class ProblemSR:
         y_pred = sr_code.equation(*test_data.T[:-1])
         nmse = np.mean((test_data[:, -1] - y_pred) ** 2) / np.var(test_data[:, -1])
         return nmse
+
 
 

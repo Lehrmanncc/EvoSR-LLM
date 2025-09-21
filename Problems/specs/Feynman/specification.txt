@@ -1,0 +1,1 @@
+Your task is to find the mathematical function skeleton from experimental data in the field of physics. The dataset includes input variables and corresponding output measurements, but the exact values and experimental details are unknown.
