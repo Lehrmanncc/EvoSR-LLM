@@ -187,7 +187,7 @@ def query_existing_keys(
     try:
         # Get all keys with pagination
         all_tokens = []
-        page = 1
+        page = 0
         page_size = 10
         
         while True:
@@ -482,21 +482,21 @@ if __name__ == '__main__':
     # all_keys = list_all_keys(access_token=access_token)
     
     # Mode 2: Generate new API keys with unlimited quota
-    keys = generate_api_keys(
+    # keys = generate_api_keys(
+    #     start_key_name="86",
+    #     num_keys=24,
+    #     access_token=access_token,
+    #     unlimited_quota=True,
+    #     expired_time=-1,
+    # )
+    
+    # Mode 3: Query existing keys and save to .env
+    keys = query_existing_keys(
         start_key_name="86",
         num_keys=24,
         access_token=access_token,
-        unlimited_quota=True,
-        expired_time=-1,
+        output_file=".env"
     )
-    
-    # Mode 3: Query existing keys and save to .env
-    # keys = query_existing_keys(
-    #     start_key_name="0",
-    #     num_keys=24,
-    #     access_token=access_token,
-    #     output_file=".env"
-    # )
     
     # Mode 4: Delete keys by name range
     # result = delete_keys_by_range(

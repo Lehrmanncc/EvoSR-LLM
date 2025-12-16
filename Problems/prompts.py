@@ -44,9 +44,14 @@ class GetPrompts:
             ) as f:
                 specification = f.read()
         else:
+            # 对于llm_srbench，根据ins_idx读取不同的specification文件
+            if self.problem.benchmark_name == "llm_srbench" and self.problem.ins_idx is not None:
+                spec_filename = f'specification_{self.problem_name}{self.problem.ins_idx}.txt'
+            else:
+                spec_filename = f'specification_{self.problem_name}.txt'
+            
             with open(
-                    os.path.join(path, 'specs', self.problem.benchmark_name,
-                                 f'specification_{self.problem_name}.txt'),
+                    os.path.join(path, 'specs', self.problem.benchmark_name, spec_filename),
                     encoding="utf-8",
             ) as f:
                 specification = f.read()
@@ -56,9 +61,14 @@ class GetPrompts:
     def parse_spec_file(self):
         path = os.path.dirname(os.path.abspath(__file__))
         if self.problem.problem_spec:
+            # 对于llm_srbench，根据ins_idx读取不同的specification文件
+            if self.problem.benchmark_name == "llm_srbench" and self.problem.ins_idx is not None:
+                spec_filename = f'specification_{self.problem_name}{self.problem.ins_idx}.txt'
+            else:
+                spec_filename = f'specification_{self.problem_name}.txt'
+            
             with open(
-                    os.path.join(path, 'specs', self.problem.benchmark_name,
-                                 f'specification_{self.problem_name}.txt'),
+                    os.path.join(path, 'specs', self.problem.benchmark_name, spec_filename),
                     encoding="utf-8") as file:
                 content = file.read()
         # Split the content by section headers
