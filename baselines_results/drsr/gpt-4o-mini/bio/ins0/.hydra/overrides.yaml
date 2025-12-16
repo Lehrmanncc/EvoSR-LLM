@@ -1,5 +1,0 @@
-- dataset.name=bio
-- dataset.type=llm_srbench
-- dataset.srbench_idx=0
-- llm.model_name=gpt-4o-mini
-- llm.choice=16

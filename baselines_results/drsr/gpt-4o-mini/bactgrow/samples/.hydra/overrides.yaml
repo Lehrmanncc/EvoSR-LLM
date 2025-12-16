@@ -1,4 +1,0 @@
-- dataset.name=bactgrow
-- dataset.type=llmsr_data
-- llm.model_name=gpt-4o-mini
-- llm.choice=5

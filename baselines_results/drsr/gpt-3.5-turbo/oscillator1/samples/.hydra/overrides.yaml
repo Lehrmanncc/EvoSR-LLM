@@ -1,4 +1,0 @@
-- dataset.name=oscillator1
-- dataset.type=llmsr_data
-- llm.model_name=gpt-3.5-turbo
-- llm.choice=2

@@ -1,5 +1,0 @@
-- dataset.name=chem
-- dataset.type=llm_srbench
-- dataset.srbench_idx=1
-- llm.model_name=gpt-4o-mini
-- llm.choice=19
