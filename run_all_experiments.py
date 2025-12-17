@@ -15,6 +15,14 @@ from datetime import datetime
 from concurrent.futures import ProcessPoolExecutor, as_completed
 import json
 
+# 限制 BLAS/OMP 的线程数，避免“外层多进程 × 内层并行 × 数值库多线程”导致线程/内存爆炸
+# 必须尽早设置（在 numpy/scipy 等被导入前）
+os.environ.setdefault("OMP_NUM_THREADS", "1")
+os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
+os.environ.setdefault("MKL_NUM_THREADS", "1")
+os.environ.setdefault("VECLIB_MAXIMUM_THREADS", "1")
+os.environ.setdefault("NUMEXPR_NUM_THREADS", "1")
+
 ABS_PATH = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(ABS_PATH)
 
@@ -52,10 +60,10 @@ API_KEYS = load_api_keys_from_env()
 
 # OES 数据集配置 (使用 benchmark="llm_sr")
 OES_DATASETS = [
-    {"benchmark": "llm_sr", "problem_name": "bactgrow", "idx": None},
-    {"benchmark": "llm_sr", "problem_name": "oscillator1", "idx": None},
-    {"benchmark": "llm_sr", "problem_name": "oscillator2", "idx": None},
-    {"benchmark": "llm_sr", "problem_name": "stressstrain", "idx": None},
+    {"benchmark": "oes", "problem_name": "bactgrow", "idx": None},
+    {"benchmark": "oes", "problem_name": "oscillator1", "idx": None},
+    {"benchmark": "oes", "problem_name": "oscillator2", "idx": None},
+    {"benchmark": "oes", "problem_name": "stressstrain", "idx": None},
 ]
 
 # LLM_SRBENCH 数据集配置
@@ -74,7 +82,7 @@ LLMSRBENCH_DATASETS = [
 ALL_DATASETS = OES_DATASETS + LLMSRBENCH_DATASETS
 
 MODELS = ["gpt-4o-mini", "gpt-3.5-turbo"]
-NUM_RUNS = 5  # 每个配置运行次数
+NUM_RUNS = 1  # 每个配置运行次数
 
 # API endpoint
 API_ENDPOINT = "aihubmix.com"
@@ -91,9 +99,20 @@ COMMON_PARAMS = {
     "exp_debug_mode": False,
 }
 
-# 并行实验数量 (建议: CPU核心数 / n_process)
-# 如果每个实验用4核，8核CPU可以同时跑2个实验
-MAX_PARALLEL_EXPERIMENTS = 2
+# 并行实验数量：默认按 CPU / (每实验内部并行 n_process) 自动计算上限，避免 OOM
+# 也可以通过环境变量 MAX_PARALLEL_EXPERIMENTS 强制设置硬上限
+def _compute_max_parallel_experiments(inner_n_process: int, hard_cap: int) -> int:
+    cpu = os.cpu_count() or 1
+    inner = max(1, int(inner_n_process))
+    # 保守策略：外层并行不要超过 cpu//inner，且不超过 hard_cap
+    return max(1, min(int(hard_cap), max(1, cpu // inner)))
+
+
+MAX_PARALLEL_EXPERIMENTS_HARDCAP = int(os.getenv("MAX_PARALLEL_EXPERIMENTS", "24"))
+MAX_PARALLEL_EXPERIMENTS = _compute_max_parallel_experiments(
+    COMMON_PARAMS.get("n_process", 1),
+    hard_cap=MAX_PARALLEL_EXPERIMENTS_HARDCAP,
+)
 
 # ============ 实验执行函数 ============
 
@@ -226,7 +245,10 @@ def run_all_experiments_parallel():
     print(f"  - {len(ALL_DATASETS)} datasets")
     print(f"  - {len(MODELS)} models")
     print(f"  - {NUM_RUNS} runs per configuration")
-    print(f"  - Max parallel experiments: {MAX_PARALLEL_EXPERIMENTS}")
+    print(f"  - Inner n_process per experiment: {COMMON_PARAMS.get('n_process', 1)}")
+    print(f"  - CPU cores detected: {os.cpu_count() or 1}")
+    print(f"  - Max parallel experiments (auto-capped): {MAX_PARALLEL_EXPERIMENTS} (hard cap={MAX_PARALLEL_EXPERIMENTS_HARDCAP})")
+    print(f"    You can override via env: MAX_PARALLEL_EXPERIMENTS=... python run_all_experiments.py")
     print(f"=" * 80)
     
     # 保存配置
@@ -244,21 +266,44 @@ def run_all_experiments_parallel():
     
     with ProcessPoolExecutor(max_workers=MAX_PARALLEL_EXPERIMENTS) as executor:
         futures = {executor.submit(run_single_experiment, cfg): cfg for cfg in configs}
-        
+
         for future in as_completed(futures):
-            result = future.result()
+            cfg = futures[future]
+            try:
+                result = future.result()
+            except Exception as e:
+                # 注意：如果发生 OOM，Linux 可能会直接杀掉某个 worker，导致 BrokenProcessPool。
+                # 这里不让主进程直接崩溃，而是记录失败并继续汇总。
+                dataset = cfg.get("dataset", {})
+                problem_name = dataset.get("problem_name", "unknown")
+                idx = dataset.get("idx")
+                instance_name = problem_name if idx is None else f"{problem_name}{idx}"
+                result = {
+                    "config_id": cfg.get("config_id"),
+                    "instance_name": instance_name,
+                    "model": cfg.get("model"),
+                    "run_id": cfg.get("run_id"),
+                    "status": "FAILED",
+                    "elapsed_time_seconds": 0.0,
+                    "elapsed_time_minutes": 0.0,
+                    "elapsed_time_hours": 0.0,
+                    "error": f"{type(e).__name__}: {e}",
+                    "output_path": None,
+                    "api_key_index": (cfg.get("config_id") - 1) if isinstance(cfg.get("config_id"), int) else None,
+                }
+
             results.append(result)
             completed += 1
-            
+
             if result["status"] == "FAILED":
                 failed += 1
-            
+
             # 进度报告
             progress = (completed / total) * 100
             elapsed = time.time() - start_time
             avg_time = elapsed / completed
             eta = avg_time * (total - completed)
-            
+
             print(f"\nProgress: {completed}/{total} ({progress:.1f}%) | "
                   f"Failed: {failed} | "
                   f"ETA: {eta/3600:.1f}h\n")
