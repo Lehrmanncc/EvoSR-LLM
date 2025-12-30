@@ -476,7 +476,7 @@ def load_existing_env(env_file: str = ".env") -> Dict[str, str]:
 
 
 if __name__ == '__main__':
-    access_token = os.getenv('ACCESS_TOKEN')
+    access_token = "a4e1bf1505b245f8ba52a404a2946dd8"
 
     # Mode 1: List all available API keys
     # all_keys = list_all_keys(access_token=access_token)
@@ -493,7 +493,7 @@ if __name__ == '__main__':
     # Mode 3: Query existing keys and save to .env
     keys = query_existing_keys(
         start_key_name="86",
-        num_keys=24,
+        num_keys=100,
         access_token=access_token,
         output_file=".env"
     )

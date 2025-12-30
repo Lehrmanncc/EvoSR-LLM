@@ -104,7 +104,7 @@ class SrEvol:
             with open(self.seed_path) as file:
                 data = json.load(file)
             population = eval.init_population_seed(data)
-            filename = self.output_path + "/results/pops/population_generation_0.json"
+            filename = self.output_path + "/pops/population_generation_0.json"
             with open(filename, 'w') as f:
                 json.dump(population, f, indent=4)
             n_start = 0
@@ -122,7 +122,7 @@ class SrEvol:
                 population = eval.init_population()
                 for i in range(len(population)):
                     filename = (self.output_path
-                                + f"/results/{self.problem.benchmark_name}/{self.llm_model}/{self.problem.problem_name}/samples/samples_fe={self.problem.fe - len(population) + i + 1}.json")
+                                + f"/samples/samples_fe={self.problem.fe - len(population) + i + 1}.json")
                     os.makedirs(os.path.dirname(filename), exist_ok=True)
                     with open(filename, 'w') as f:
                         if population[i]['code'] is not None:
@@ -141,7 +141,7 @@ class SrEvol:
 
                 # Save population to a file
                 filename = (self.output_path
-                            + f"/results/{self.problem.benchmark_name}/{self.llm_model}/{self.problem.problem_name}/pops/population_fe={self.problem.fe}.json")
+                            + f"/pops/population_fe={self.problem.fe}.json")
                 os.makedirs(os.path.dirname(filename), exist_ok=True)
                 with open(filename, 'w') as f:
                     json.dump(population, f, indent=4)
@@ -156,7 +156,7 @@ class SrEvol:
                 self.add2pop(population, offsprings)
                 for j, off in enumerate(offsprings):
                     filename = (self.output_path
-                                + f"/results/{self.problem.benchmark_name}/{self.llm_model}/{self.problem.problem_name}/samples/samples_fe={self.problem.fe - len(offsprings) + j + 1}.json")
+                                + f"/samples/samples_fe={self.problem.fe - len(offsprings) + j + 1}.json")
                     os.makedirs(os.path.dirname(filename), exist_ok=True)
 
                     if off['objective'] is not None:
@@ -199,7 +199,7 @@ class SrEvol:
 
                 average_rank = self.cal_operator_fitness(operator_pop_fitness)
                 filename = (self.output_path
-                            + f"/results/{self.problem.benchmark_name}/{self.llm_model}/{self.problem.problem_name}/operator_pops/population_fe="
+                            + f"/operator_pops/population_fe="
                             + str(self.problem.fe) + ".json")
                 os.makedirs(os.path.dirname(filename), exist_ok=True)
 
@@ -220,7 +220,7 @@ class SrEvol:
                 op_index = (op_index + 1) % len(op_label_lst)
 
             filename = (self.output_path
-                        + f"/results/{self.problem.benchmark_name}/{self.llm_model}/{self.problem.problem_name}/pops/population_fe="
+                        + f"/pops/population_fe="
                         + str(self.problem.fe) + ".json")
             os.makedirs(os.path.dirname(filename), exist_ok=True)
             with open(filename, 'w') as f:
@@ -232,7 +232,7 @@ class SrEvol:
             population[0].update({'test_ood_nmse': test_nmse})
 
             filename = (self.output_path
-                        + f"/results/{self.problem.benchmark_name}/{self.llm_model}/{self.problem.problem_name}/pops_best/population_fe="
+                        + f"/pops_best/population_fe="
                         + str(self.problem.fe) + ".json")
             os.makedirs(os.path.dirname(filename), exist_ok=True)
             with open(filename, 'w') as f:
@@ -249,7 +249,7 @@ class SrEvol:
             print("")
 
         filename = (self.output_path
-                    + f"/results/{self.problem.benchmark_name}/{self.llm_model}/{self.problem.problem_name}/best_equ.json")
+                    + f"/best_equ.json")
         os.makedirs(os.path.dirname(filename), exist_ok=True)
         best_equ = population[0]
         best_equ["time_cost"] = time.time() - time_start
