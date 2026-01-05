@@ -9,17 +9,6 @@ Exact training and evaluation data used in the paper:
 - `llm_srbench_data/` (8 datasets)
 
 
-## Dataset Details
-
-Each dataset folder contains `train.csv`, `test_id.csv` (in-distribution), and `test_ood.csv` (out-of-distribution).
-Ranges are computed per column for each split.
-
-Summary format:
-- `split` uses row counts and per-column `[min, max]` ranges.
-- Column order matches the CSV header order.
-
-<!-- DATASET_SUMMARY_END -->
-
 <!-- DATASET_SUMMARY_START -->
 ## Dataset Details
 
