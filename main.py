@@ -31,7 +31,7 @@ def _parse_args() -> argparse.Namespace:
 
     parser.add_argument("--llm-model", default="gpt-3.5-turbo", help="Remote LLM model name")
     parser.add_argument("--llm-api-endpoint", default="aihubmix.com", help="Remote LLM endpoint")
-    parser.add_argument("--llm-api-key", default="sk-nBgrrFMWTVRyVL8466Ef3dB4F59c49EeA7B53519F7156f2b", help="Remote LLM API key")
+    parser.add_argument("--llm-api-key", default=None, help="Remote LLM API key")
     parser.add_argument("--llm-api-key-env", default="API_KEY", help="Env var name for API key")
     parser.add_argument("--llm-use-local", action="store_true", help="Use a local LLM server")
     parser.add_argument("--llm-local-url", default=None, help="Local LLM server URL")
